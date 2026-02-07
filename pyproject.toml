@@ -1,0 +1,32 @@
+[project]
+name = "spectraflex"
+version = "0.1.0"
+description = "Transfer function identification and spectral response prediction for OrcaFlex"
+readme = "README.md"
+authors = [
+    { name = "jan-erik-hygen-4ss", email = "jan-erik.hygen@4subsea.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.4.2",
+    "orcfxapi>=11.6.1",
+    "scipy>=1.17.0",
+    "xarray>=2026.1.0",
+]
+
+[project.optional-dependencies]
+io = ["netcdf4>=1.6", "h5netcdf>=1.1"]
+plot = ["matplotlib>=3.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "netcdf4>=1.7.0",
+    "pyright>=1.1.408",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.0",
+]

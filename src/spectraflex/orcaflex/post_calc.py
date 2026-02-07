@@ -17,6 +17,8 @@ from typing import Any
 
 # The post-calculation script template
 # This script is embedded in OrcaFlex models and runs after simulation
+# NOTE: Use doubled braces {{}} for literal braces in the output script,
+# single braces {} for .format() placeholders
 POST_CALC_SCRIPT = '''
 """Spectraflex post-calculation action script.
 
@@ -73,7 +75,7 @@ def Execute(info):
     for spec in RESULTS_SPEC:
         obj = model[spec["object"]]
         var_name = spec["variable"]
-        label = spec.get("label", f"{spec['object']}_{var_name}")
+        label = spec.get("label", spec["object"] + "_" + var_name)
         variable_names.append(label)
 
         # Build ObjectExtra if needed
@@ -148,7 +150,7 @@ def Execute(info):
         window=WINDOW,
     )
 
-    info.Log(f"spectraflex: Saved spectra to {output_path}")
+    info.Log("spectraflex: Saved spectra to " + output_path)
 '''
 
 

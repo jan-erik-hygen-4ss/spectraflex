@@ -18,6 +18,9 @@ dependencies = [
 io = ["netcdf4>=1.6", "h5netcdf>=1.1"]
 plot = ["matplotlib>=3.7"]
 
+[project.scripts]
+spectraflex = "spectraflex.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

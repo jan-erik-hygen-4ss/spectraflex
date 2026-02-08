@@ -356,3 +356,241 @@ def select_frequency_range(
         mask &= freq <= f_max
 
     return ds.isel(frequency=mask)
+
+
+def compare(
+    tf1: xr.Dataset,
+    tf2: xr.Dataset,
+    variable: str | None = None,
+) -> dict[str, float]:
+    """Compare two transfer functions.
+
+    Computes correlation and difference statistics between the magnitudes
+    of two transfer functions. Useful for validating that H(f) is consistent
+    across different Hs values (linearity check).
+
+    Parameters
+    ----------
+    tf1 : xr.Dataset
+        First TransferFunction Dataset.
+    tf2 : xr.Dataset
+        Second TransferFunction Dataset.
+    variable : str, optional
+        Variable name to compare. If None and there's only one variable,
+        uses that. If None and multiple variables exist, raises ValueError.
+
+    Returns
+    -------
+    dict[str, float]
+        Dictionary with keys:
+        - correlation: Pearson correlation coefficient of magnitudes
+        - mean_rel_diff: Mean relative difference (|m1-m2| / max(m1,m2))
+        - max_rel_diff: Maximum relative difference
+        - rms_diff: RMS difference in magnitude
+
+    Raises
+    ------
+    ValueError
+        If frequencies don't match or variable selection is ambiguous.
+
+    Examples
+    --------
+    >>> tf_hs2 = identify.from_spectra("hs2.0_spectra.npz")
+    >>> tf_hs3 = identify.from_spectra("hs3.0_spectra.npz")
+    >>> stats = transfer_function.compare(tf_hs2, tf_hs3)
+    >>> print(f"Correlation: {stats['correlation']:.4f}")
+    Correlation: 0.9950
+    """
+    # Validate frequencies match
+    f1 = tf1.coords["frequency"].values
+    f2 = tf2.coords["frequency"].values
+
+    if len(f1) != len(f2) or not np.allclose(f1, f2, rtol=1e-10):
+        raise ValueError(
+            f"Frequencies don't match: tf1 has {len(f1)} points, "
+            f"tf2 has {len(f2)} points"
+        )
+
+    # Select variable
+    vars1 = list(tf1.coords["variable"].values)
+    vars2 = list(tf2.coords["variable"].values)
+
+    if variable is None:
+        if len(vars1) == 1 and len(vars2) == 1:
+            variable = vars1[0]
+            if vars1[0] != vars2[0]:
+                # Different names but single variable - allow comparison
+                pass
+        else:
+            raise ValueError(
+                f"Multiple variables present. Specify which to compare. "
+                f"tf1 has: {vars1}, tf2 has: {vars2}"
+            )
+
+    # Get magnitudes
+    if variable in vars1:
+        mag1 = tf1["magnitude"].sel(variable=variable).values
+    else:
+        # Single variable case with different name
+        mag1 = tf1["magnitude"].values[:, 0]
+
+    if variable in vars2:
+        mag2 = tf2["magnitude"].sel(variable=variable).values
+    else:
+        mag2 = tf2["magnitude"].values[:, 0]
+
+    # Compute statistics
+    correlation = float(np.corrcoef(mag1, mag2)[0, 1])
+
+    # Relative difference: |m1-m2| / max(m1, m2), avoiding div by zero
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rel_diff = np.abs(mag1 - mag2) / np.maximum(mag1, mag2)
+        rel_diff = np.where(np.isfinite(rel_diff), rel_diff, 0.0)
+
+    mean_rel_diff = float(np.mean(rel_diff))
+    max_rel_diff = float(np.max(rel_diff))
+
+    # RMS difference
+    rms_diff = float(np.sqrt(np.mean((mag1 - mag2) ** 2)))
+
+    return {
+        "correlation": correlation,
+        "mean_rel_diff": mean_rel_diff,
+        "max_rel_diff": max_rel_diff,
+        "rms_diff": rms_diff,
+    }
+
+
+def average(
+    tf_list: list[xr.Dataset],
+    weights: str = "coherence",
+) -> xr.Dataset:
+    """Average multiple transfer functions.
+
+    Combines multiple transfer function estimates into a single averaged
+    estimate. Useful for reducing noise when multiple white noise simulations
+    are available.
+
+    Parameters
+    ----------
+    tf_list : list of xr.Dataset
+        Transfer functions to average. Must have the same frequencies
+        and variables.
+    weights : {"coherence", "equal"}, optional
+        Weighting scheme:
+        - "coherence": Weight by coherence (higher coherence = more reliable)
+        - "equal": Simple unweighted mean
+        Default is "coherence".
+
+    Returns
+    -------
+    xr.Dataset
+        Averaged transfer function. The coherence in the result is the
+        mean coherence across inputs.
+
+    Raises
+    ------
+    ValueError
+        If tf_list is empty, frequencies don't match, or variables don't match.
+
+    Notes
+    -----
+    For phase averaging, complex averaging is used:
+        H_avg = sum(w_i * H_i) / sum(w_i)
+    where H_i = |H_i| * exp(1j * phase_i)
+
+    This correctly handles phase wrapping and produces a meaningful
+    average even when phases differ.
+
+    Examples
+    --------
+    >>> tf_list = [
+    ...     identify.from_spectra("hs2.0_spectra.npz"),
+    ...     identify.from_spectra("hs3.0_spectra.npz"),
+    ...     identify.from_spectra("hs4.0_spectra.npz"),
+    ... ]
+    >>> tf_avg = transfer_function.average(tf_list, weights="coherence")
+    """
+    if not tf_list:
+        raise ValueError("tf_list cannot be empty")
+
+    if len(tf_list) == 1:
+        return tf_list[0].copy(deep=True)
+
+    # Validate all have same frequencies and variables
+    ref = tf_list[0]
+    ref_freq = ref.coords["frequency"].values
+    ref_vars = list(ref.coords["variable"].values)
+
+    for i, tf in enumerate(tf_list[1:], start=1):
+        tf_freq = tf.coords["frequency"].values
+        tf_vars = list(tf.coords["variable"].values)
+
+        if len(tf_freq) != len(ref_freq) or not np.allclose(
+            tf_freq, ref_freq, rtol=1e-10
+        ):
+            raise ValueError(
+                f"Frequency mismatch: tf_list[0] has {len(ref_freq)} points, "
+                f"tf_list[{i}] has {len(tf_freq)} points"
+            )
+
+        if tf_vars != ref_vars:
+            raise ValueError(
+                f"Variable mismatch: tf_list[0] has {ref_vars}, "
+                f"tf_list[{i}] has {tf_vars}"
+            )
+
+    n_tf = len(tf_list)
+    n_freq = len(ref_freq)
+    n_var = len(ref_vars)
+
+    # Stack arrays: shape (n_tf, n_freq, n_var)
+    mags = np.array([tf["magnitude"].values for tf in tf_list])
+    phases = np.array([tf["phase"].values for tf in tf_list])
+    cohs = np.array([tf["coherence"].values for tf in tf_list])
+
+    # Compute weights
+    if weights == "coherence":
+        # Normalize coherence weights per frequency/variable
+        w = cohs / cohs.sum(axis=0, keepdims=True)
+        # Handle case where all coherences are zero
+        w = np.where(np.isfinite(w), w, 1.0 / n_tf)
+    elif weights == "equal":
+        w = np.ones_like(mags) / n_tf
+    else:
+        raise ValueError(f"weights must be 'coherence' or 'equal', got '{weights}'")
+
+    # Complex averaging for magnitude and phase
+    h_complex = mags * np.exp(1j * phases)
+    h_avg = (h_complex * w).sum(axis=0)
+
+    avg_magnitude = np.abs(h_avg)
+    avg_phase = np.angle(h_avg)
+
+    # Mean coherence (not weighted - just informational)
+    avg_coherence = cohs.mean(axis=0)
+
+    # Average Sxx if present in all
+    avg_sxx = None
+    if all("Sxx" in tf for tf in tf_list):
+        sxx_stack = np.array([tf["Sxx"].values for tf in tf_list])
+        avg_sxx = sxx_stack.mean(axis=0)
+
+    # Average Syy if present in all
+    avg_syy = None
+    if all("Syy" in tf for tf in tf_list):
+        syy_stack = np.array([tf["Syy"].values for tf in tf_list])
+        avg_syy = syy_stack.mean(axis=0)
+
+    # Create averaged dataset
+    return create(
+        frequency=ref_freq,
+        magnitude=avg_magnitude,
+        phase=avg_phase,
+        coherence=avg_coherence,
+        variable_names=ref_vars,
+        sxx=avg_sxx,
+        syy=avg_syy,
+        averaged_from=n_tf,
+        averaging_weights=weights,
+    )

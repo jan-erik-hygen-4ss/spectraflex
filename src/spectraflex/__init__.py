@@ -10,6 +10,7 @@ __version__ = "0.1.0"
 
 # Re-export main modules for convenient access
 from spectraflex import (
+    fatigue,
     identify,
     io,
     library,
@@ -18,10 +19,12 @@ from spectraflex import (
     statistics,
     transfer_function,
 )
+from spectraflex.fatigue import SNCurve
 from spectraflex.library import TransferFunctionLibrary
 
 __all__ = [
     "__version__",
+    "fatigue",
     "identify",
     "io",
     "library",
@@ -29,5 +32,6 @@ __all__ = [
     "spectrum",
     "statistics",
     "transfer_function",
+    "SNCurve",
     "TransferFunctionLibrary",
 ]

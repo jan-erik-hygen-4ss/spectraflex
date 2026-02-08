@@ -289,6 +289,7 @@ def from_sim(
 def from_spectra(
     spectra_path: str | Path,
     config: dict[str, Any] | None = None,
+    freq_range: tuple[float, float] | None = None,
 ) -> xr.Dataset:
     """Create TransferFunction from pre-computed spectra file.
 
@@ -306,6 +307,10 @@ def from_spectra(
         - variable_names: list of variable names
     config : dict, optional
         Configuration metadata.
+    freq_range : tuple of float, optional
+        (f_min, f_max) to filter frequencies to the valid range where
+        the white noise wave had energy. Recommended to match the
+        frequency range used in the OrcaFlex response calculation.
 
     Returns
     -------
@@ -329,6 +334,15 @@ def from_spectra(
         syy = syy[:, np.newaxis]
     if sxy.ndim == 1:
         sxy = sxy[:, np.newaxis]
+
+    # Filter to valid frequency range if specified
+    if freq_range is not None:
+        f_min, f_max = freq_range
+        mask = (frequency >= f_min) & (frequency <= f_max)
+        frequency = frequency[mask]
+        sxx = sxx[mask]
+        syy = syy[mask, :]
+        sxy = sxy[mask, :]
 
     n_freq, n_var = syy.shape
 

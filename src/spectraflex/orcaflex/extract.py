@@ -133,7 +133,11 @@ def extract_time_histories(
         - object: str, OrcaFlex object name
         - variable: str, variable name (e.g., "Rotation 1", "Effective Tension")
         - arclength: float, optional, arc length for line objects
+        - end_a: bool, optional, if True use oeEndA (line end A connection)
+        - end_b: bool, optional, if True use oeEndB (line end B connection)
         - label: str, optional, friendly name for the result
+
+        Note: arclength, end_a, and end_b are mutually exclusive.
     period : tuple, optional
         (start_time, end_time). If None, uses main simulation period.
 
@@ -149,6 +153,8 @@ def extract_time_histories(
     >>> results = [
     ...     {"object": "Riser", "variable": "Rotation 1", "arclength": 0.0, "label": "UFJ"},
     ...     {"object": "Riser", "variable": "Effective Tension", "arclength": 0.0},
+    ...     {"object": "Riser", "variable": "End Force", "end_a": True, "label": "EndA_Force"},
+    ...     {"object": "Riser", "variable": "End Force", "end_b": True, "label": "EndB_Force"},
     ... ]
     >>> data = extract_time_histories(model, results)
     >>> data["UFJ"].shape
@@ -178,7 +184,11 @@ def extract_time_histories(
         labels.append(label)
 
         # Build ObjectExtra if needed
-        if "arclength" in res and res["arclength"] is not None:
+        if res.get("end_a"):
+            obj_extra = ofx.oeEndA
+        elif res.get("end_b"):
+            obj_extra = ofx.oeEndB
+        elif "arclength" in res and res["arclength"] is not None:
             obj_extra = ofx.oeArcLength(res["arclength"])
         else:
             obj_extra = None

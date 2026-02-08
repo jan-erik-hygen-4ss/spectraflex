@@ -242,15 +242,12 @@ def _write_yaml_variation(
     extra_data: dict[str, Any] | None,
 ) -> None:
     """Write a YAML variation file for OrcaFlex."""
-    # Convert frequencies to periods for OrcaFlex
-    # OrcaFlex uses WaveTp for response calculation range
-    max_period = 1.0 / min_freq  # longest period = lowest frequency
-
     lines = [
         "# Auto-generated white noise variation file for spectraflex",
-        f"# Template: {template}",
         f"# Hs: {hs} m, Direction: {wave_direction} deg",
         f"# Frequency range: {min_freq} - {max_freq} Hz",
+        "",
+        f"BaseFile: {template}",
         "",
     ]
 
@@ -272,12 +269,11 @@ def _write_yaml_variation(
             "  WaveType: Response calculation",
             f"  WaveDirection: {wave_direction}",
             f"  WaveHs: {hs}",
-            "  WaveOrigin: [0, 0]",
+            "  WaveOriginX: 0",
+            "  WaveOriginY: 0",
             "  WaveTimeOrigin: 0",
-            "  WaveSpectrumDiscretisationMethod: Equal energy",
-            "  WaveNumberOfComponents: 300",
-            f"  WaveSpectrumMinRelFrequency: {min_freq / (1 / max_period):.4f}",
-            f"  WaveSpectrumMaxRelFrequency: {max_freq / (1 / max_period):.4f}",
+            f"  WaveResponseCalculationFrequencyLowerBound: {min_freq}",
+            f"  WaveResponseCalculationFrequencyUpperBound: {max_freq}",
             "",
         ]
     )
@@ -343,13 +339,8 @@ def _write_dat_file(
     env.WaveType = "Response calculation"
     env.WaveDirection = wave_direction
     env.WaveHs = hs
-    env.WaveSpectrumDiscretisationMethod = "Equal energy"
-    env.WaveNumberOfComponents = 300
-
-    # Set frequency range via relative frequencies
-    max_period = 1.0 / min_freq
-    env.WaveSpectrumMinRelFrequency = min_freq / (1 / max_period)
-    env.WaveSpectrumMaxRelFrequency = max_freq / (1 / max_period)
+    env.WaveResponseCalculationFrequencyLowerBound = min_freq
+    env.WaveResponseCalculationFrequencyUpperBound = max_freq
 
     # Set current if specified
     if current_speed is not None:

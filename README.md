@@ -41,6 +41,7 @@ This reduces computation time from hours to seconds when screening many environm
 - **Spectral statistics**: Moments (m0, m1, m2, m4), Hs, Tz, bandwidth, MPM
 - **Transfer function identification**: H1 estimator with coherence quality metrics
 - **Response prediction**: Spectrum prediction, statistics, time series synthesis
+- **Spectral fatigue**: DNV S-N curves, Dirlik and narrow-band damage calculation
 - **Library management**: Store and query transfer functions by operating conditions
 - **OrcaFlex integration**: Generate white noise models, extract results, batch processing
 - **CLI**: Command-line interface for common workflows
@@ -144,6 +145,29 @@ The coherence function measures reliability of the identified transfer function:
 - gamma^2 near 1: Reliable (strong linear relationship)
 - gamma^2 near 0: Unreliable (noise or nonlinearity)
 
+### Spectral Fatigue
+
+Calculate fatigue damage directly from transfer functions using DNV S-N curves:
+
+```python
+from spectraflex import fatigue, spectrum
+
+# Define S-N curve (DNV-D for fillet welds)
+sn_curve = fatigue.SNCurve.dnv_d()
+
+# Calculate damage from stress transfer function
+result = fatigue.damage_from_transfer_function(
+    tf=stress_tf,              # Transfer function in MPa/m
+    wave_spectrum=wave,        # Wave spectrum
+    sn_curve=sn_curve,
+    exposure_time=3600 * 24,   # 1 day in seconds
+    method="dirlik",           # or "narrow_band"
+)
+
+print(f"Fatigue damage: {result['damage']:.2e}")
+print(f"Fatigue life: {result['life_seconds'] / 3600 / 24 / 365:.1f} years")
+```
+
 ## Project Structure
 
 ```
@@ -153,6 +177,7 @@ src/spectraflex/
 ├── transfer_function.py # TransferFunction Dataset creation and validation
 ├── identify.py          # Transfer function identification
 ├── predict.py           # Response prediction
+├── fatigue.py           # Spectral fatigue (S-N curves, Dirlik, damage)
 ├── library.py           # TransferFunctionLibrary for managing collections
 ├── cli.py               # Command-line interface
 ├── io/                  # I/O utilities (NetCDF, NPZ)

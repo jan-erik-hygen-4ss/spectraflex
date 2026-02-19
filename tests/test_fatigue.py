@@ -155,6 +155,85 @@ class TestSNCurve:
         n_thick = curve_thick.cycles_to_failure(s)
         assert n_thick < n_orig
 
+    # --- DNV-RP-C203 (2024) parameter verification ---
+
+    def test_2024_transition_points_air(self) -> None:
+        """Verify transition points match DNV-RP-C203 (2024) Table 2-1."""
+        # B1, B2, C, C1, C2 transition at 5e6 in air
+        for factory in [SNCurve.dnv_b1, SNCurve.dnv_b2, SNCurve.dnv_c,
+                        SNCurve.dnv_c1, SNCurve.dnv_c2]:
+            curve = factory(in_air=True)
+            assert curve.n_transition == 5e6, f"{curve.name} should have N_t=5e6"
+
+        # D through W3 transition at 1e7 in air
+        for factory in [SNCurve.dnv_d, SNCurve.dnv_e, SNCurve.dnv_f,
+                        SNCurve.dnv_f1, SNCurve.dnv_f3, SNCurve.dnv_g,
+                        SNCurve.dnv_w1, SNCurve.dnv_w2, SNCurve.dnv_w3]:
+            curve = factory(in_air=True)
+            assert curve.n_transition == 1e7, f"{curve.name} should have N_t=1e7"
+
+    def test_2024_transition_points_cp(self) -> None:
+        """Verify all seawater CP curves transition at 1e6 (Table 2-2)."""
+        for factory in [SNCurve.dnv_b1, SNCurve.dnv_b2, SNCurve.dnv_c,
+                        SNCurve.dnv_c1, SNCurve.dnv_c2, SNCurve.dnv_d,
+                        SNCurve.dnv_e, SNCurve.dnv_f, SNCurve.dnv_f1,
+                        SNCurve.dnv_f3, SNCurve.dnv_g, SNCurve.dnv_w1,
+                        SNCurve.dnv_w2, SNCurve.dnv_w3]:
+            curve = factory(in_air=False)
+            assert curve.n_transition == 1e6, f"{curve.name} should have N_t=1e6"
+
+    def test_2024_c_curves_slope_35(self) -> None:
+        """Verify C, C1, C2 have m1=3.5 in 2024 edition (both environments)."""
+        for factory in [SNCurve.dnv_c, SNCurve.dnv_c1, SNCurve.dnv_c2]:
+            for in_air in [True, False]:
+                curve = factory(in_air=in_air)
+                assert curve.m1 == 3.5, f"{curve.name} should have m1=3.5"
+
+    def test_2024_cp_log_a2_matches_air(self) -> None:
+        """Verify seawater CP log_a2 equals in-air log_a2 (2024 edition)."""
+        for factory in [SNCurve.dnv_b1, SNCurve.dnv_b2, SNCurve.dnv_c,
+                        SNCurve.dnv_c1, SNCurve.dnv_c2, SNCurve.dnv_d,
+                        SNCurve.dnv_e, SNCurve.dnv_f, SNCurve.dnv_f1,
+                        SNCurve.dnv_f3, SNCurve.dnv_g, SNCurve.dnv_w1,
+                        SNCurve.dnv_w2, SNCurve.dnv_w3]:
+            air = factory(in_air=True)
+            cp = factory(in_air=False)
+            assert cp.log_a2 == air.log_a2, (
+                f"{air.name}: CP log_a2={cp.log_a2} != air log_a2={air.log_a2}"
+            )
+
+    def test_2024_d_air_fatigue_limit(self) -> None:
+        """Verify D curve fatigue limit at N_t matches Table 2-1 (52.63 MPa)."""
+        curve = SNCurve.dnv_d(in_air=True)
+        s_t = curve.stress_at_transition()
+        np.testing.assert_allclose(s_t, 52.63, rtol=0.001)
+
+    def test_2024_b1_air_fatigue_limit(self) -> None:
+        """Verify B1 curve fatigue limit at N_t matches Table 2-1 (127.21 MPa)."""
+        curve = SNCurve.dnv_b1(in_air=True)
+        s_t = curve.stress_at_transition()
+        np.testing.assert_allclose(s_t, 127.21, rtol=0.01)
+
+    def test_2024_c_air_fatigue_limit(self) -> None:
+        """Verify C curve fatigue limit at N_t matches Table 2-1 (96.21 MPa)."""
+        curve = SNCurve.dnv_c(in_air=True)
+        s_t = curve.stress_at_transition()
+        np.testing.assert_allclose(s_t, 96.21, rtol=0.01)
+
+    def test_2024_thickness_exponents(self) -> None:
+        """Verify thickness exponents match 2024 tables."""
+        expected_k = {
+            "dnv_b1": 0.0, "dnv_b2": 0.0,
+            "dnv_c": 0.05, "dnv_c1": 0.10, "dnv_c2": 0.15,
+            "dnv_d": 0.20, "dnv_e": 0.20,
+            "dnv_f": 0.25, "dnv_f1": 0.25, "dnv_f3": 0.25,
+            "dnv_g": 0.25, "dnv_w1": 0.25, "dnv_w2": 0.25, "dnv_w3": 0.25,
+        }
+        for name, k in expected_k.items():
+            factory = getattr(SNCurve, name)
+            curve = factory(in_air=True)
+            assert curve.k == k, f"{curve.name} k={curve.k} != expected {k}"
+
 
 # =============================================================================
 # Spectral Parameter Tests

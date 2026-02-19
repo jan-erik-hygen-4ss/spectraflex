@@ -1,8 +1,8 @@
 """Spectral fatigue analysis and damage calculation.
 
 Provides functions to calculate fatigue damage from spectral response analysis
-using DNV-RP-C203 S-N curves and standard spectral fatigue methods (narrow-band
-Rayleigh and Dirlik).
+using DNV-RP-C203 (October 2024 edition) S-N curves and standard spectral
+fatigue methods (narrow-band Rayleigh and Dirlik).
 
 This module enables fatigue estimation from white noise simulations by combining
 transfer functions with wave spectra to compute stress response spectra, then
@@ -161,120 +161,120 @@ class SNCurve:
         return self.with_scf(thickness_factor)
 
     # =========================================================================
-    # DNV-RP-C203 Standard Curves (In Air)
+    # DNV-RP-C203 (October 2024) Standard Curves — Tables 2-1 and 2-2
     # =========================================================================
 
     @classmethod
     def dnv_b1(cls, in_air: bool = True) -> SNCurve:
         """DNV B1 curve - Ground welds, base material."""
         if in_air:
-            return cls(m1=4.0, log_a1=15.117, m2=5.0, log_a2=17.146, k=0.0, name="DNV-B1")
+            return cls(m1=4.0, log_a1=15.117, m2=5.0, log_a2=17.222, n_transition=5e6, k=0.0, name="DNV-B1")
         else:
-            return cls(m1=4.0, log_a1=14.917, m2=5.0, log_a2=16.856, k=0.0, name="DNV-B1-SW")
+            return cls(m1=4.0, log_a1=14.977, m2=5.0, log_a2=17.222, n_transition=1e6, k=0.0, name="DNV-B1-CP")
 
     @classmethod
     def dnv_b2(cls, in_air: bool = True) -> SNCurve:
         """DNV B2 curve - Ground welds."""
         if in_air:
-            return cls(m1=4.0, log_a1=14.885, m2=5.0, log_a2=16.856, k=0.0, name="DNV-B2")
+            return cls(m1=4.0, log_a1=14.885, m2=5.0, log_a2=16.931, n_transition=5e6, k=0.0, name="DNV-B2")
         else:
-            return cls(m1=4.0, log_a1=14.685, m2=5.0, log_a2=16.566, k=0.0, name="DNV-B2-SW")
+            return cls(m1=4.0, log_a1=14.745, m2=5.0, log_a2=16.931, n_transition=1e6, k=0.0, name="DNV-B2-CP")
 
     @classmethod
     def dnv_c(cls, in_air: bool = True) -> SNCurve:
         """DNV C curve - Butt welds, automatic."""
         if in_air:
-            return cls(m1=3.0, log_a1=12.592, m2=5.0, log_a2=16.320, k=0.15, name="DNV-C")
+            return cls(m1=3.5, log_a1=13.640, m2=5.0, log_a2=16.615, n_transition=5e6, k=0.05, name="DNV-C")
         else:
-            return cls(m1=3.0, log_a1=12.192, m2=5.0, log_a2=15.720, k=0.15, name="DNV-C-SW")
+            return cls(m1=3.5, log_a1=13.431, m2=5.0, log_a2=16.615, n_transition=1e6, k=0.05, name="DNV-C-CP")
 
     @classmethod
     def dnv_c1(cls, in_air: bool = True) -> SNCurve:
         """DNV C1 curve - Butt welds."""
         if in_air:
-            return cls(m1=3.0, log_a1=12.449, m2=5.0, log_a2=16.081, k=0.15, name="DNV-C1")
+            return cls(m1=3.5, log_a1=13.473, m2=5.0, log_a2=16.377, n_transition=5e6, k=0.10, name="DNV-C1")
         else:
-            return cls(m1=3.0, log_a1=12.049, m2=5.0, log_a2=15.481, k=0.15, name="DNV-C1-SW")
+            return cls(m1=3.5, log_a1=13.264, m2=5.0, log_a2=16.377, n_transition=1e6, k=0.10, name="DNV-C1-CP")
 
     @classmethod
     def dnv_c2(cls, in_air: bool = True) -> SNCurve:
         """DNV C2 curve - Butt welds."""
         if in_air:
-            return cls(m1=3.0, log_a1=12.301, m2=5.0, log_a2=15.835, k=0.15, name="DNV-C2")
+            return cls(m1=3.5, log_a1=13.301, m2=5.0, log_a2=16.130, n_transition=5e6, k=0.15, name="DNV-C2")
         else:
-            return cls(m1=3.0, log_a1=11.901, m2=5.0, log_a2=15.235, k=0.15, name="DNV-C2-SW")
+            return cls(m1=3.5, log_a1=13.091, m2=5.0, log_a2=16.130, n_transition=1e6, k=0.15, name="DNV-C2-CP")
 
     @classmethod
     def dnv_d(cls, in_air: bool = True) -> SNCurve:
         """DNV D curve - Fillet welds (most common, default)."""
         if in_air:
-            return cls(m1=3.0, log_a1=12.164, m2=5.0, log_a2=15.606, k=0.20, name="DNV-D")
+            return cls(m1=3.0, log_a1=12.164, m2=5.0, log_a2=15.606, n_transition=1e7, k=0.20, name="DNV-D")
         else:
-            return cls(m1=3.0, log_a1=11.764, m2=5.0, log_a2=15.006, k=0.20, name="DNV-D-SW")
+            return cls(m1=3.0, log_a1=11.764, m2=5.0, log_a2=15.606, n_transition=1e6, k=0.20, name="DNV-D-CP")
 
     @classmethod
     def dnv_e(cls, in_air: bool = True) -> SNCurve:
         """DNV E curve - Attached plates."""
         if in_air:
-            return cls(m1=3.0, log_a1=12.010, m2=5.0, log_a2=15.350, k=0.20, name="DNV-E")
+            return cls(m1=3.0, log_a1=12.010, m2=5.0, log_a2=15.350, n_transition=1e7, k=0.20, name="DNV-E")
         else:
-            return cls(m1=3.0, log_a1=11.610, m2=5.0, log_a2=14.750, k=0.20, name="DNV-E-SW")
+            return cls(m1=3.0, log_a1=11.610, m2=5.0, log_a2=15.350, n_transition=1e6, k=0.20, name="DNV-E-CP")
 
     @classmethod
     def dnv_f(cls, in_air: bool = True) -> SNCurve:
         """DNV F curve - Complex joints."""
         if in_air:
-            return cls(m1=3.0, log_a1=11.855, m2=5.0, log_a2=15.091, k=0.25, name="DNV-F")
+            return cls(m1=3.0, log_a1=11.855, m2=5.0, log_a2=15.091, n_transition=1e7, k=0.25, name="DNV-F")
         else:
-            return cls(m1=3.0, log_a1=11.455, m2=5.0, log_a2=14.491, k=0.25, name="DNV-F-SW")
+            return cls(m1=3.0, log_a1=11.455, m2=5.0, log_a2=15.091, n_transition=1e6, k=0.25, name="DNV-F-CP")
 
     @classmethod
     def dnv_f1(cls, in_air: bool = True) -> SNCurve:
         """DNV F1 curve - Complex joints."""
         if in_air:
-            return cls(m1=3.0, log_a1=11.699, m2=5.0, log_a2=14.832, k=0.25, name="DNV-F1")
+            return cls(m1=3.0, log_a1=11.699, m2=5.0, log_a2=14.832, n_transition=1e7, k=0.25, name="DNV-F1")
         else:
-            return cls(m1=3.0, log_a1=11.299, m2=5.0, log_a2=14.232, k=0.25, name="DNV-F1-SW")
+            return cls(m1=3.0, log_a1=11.299, m2=5.0, log_a2=14.832, n_transition=1e6, k=0.25, name="DNV-F1-CP")
 
     @classmethod
     def dnv_f3(cls, in_air: bool = True) -> SNCurve:
         """DNV F3 curve - Complex joints."""
         if in_air:
-            return cls(m1=3.0, log_a1=11.546, m2=5.0, log_a2=14.576, k=0.25, name="DNV-F3")
+            return cls(m1=3.0, log_a1=11.546, m2=5.0, log_a2=14.576, n_transition=1e7, k=0.25, name="DNV-F3")
         else:
-            return cls(m1=3.0, log_a1=11.146, m2=5.0, log_a2=13.976, k=0.25, name="DNV-F3-SW")
+            return cls(m1=3.0, log_a1=11.146, m2=5.0, log_a2=14.576, n_transition=1e6, k=0.25, name="DNV-F3-CP")
 
     @classmethod
     def dnv_g(cls, in_air: bool = True) -> SNCurve:
         """DNV G curve - Complex joints."""
         if in_air:
-            return cls(m1=3.0, log_a1=11.398, m2=5.0, log_a2=14.330, k=0.25, name="DNV-G")
+            return cls(m1=3.0, log_a1=11.398, m2=5.0, log_a2=14.330, n_transition=1e7, k=0.25, name="DNV-G")
         else:
-            return cls(m1=3.0, log_a1=10.998, m2=5.0, log_a2=13.730, k=0.25, name="DNV-G-SW")
+            return cls(m1=3.0, log_a1=10.998, m2=5.0, log_a2=14.330, n_transition=1e6, k=0.25, name="DNV-G-CP")
 
     @classmethod
     def dnv_w1(cls, in_air: bool = True) -> SNCurve:
         """DNV W1 curve - Worst weld quality."""
         if in_air:
-            return cls(m1=3.0, log_a1=11.261, m2=5.0, log_a2=14.101, k=0.25, name="DNV-W1")
+            return cls(m1=3.0, log_a1=11.261, m2=5.0, log_a2=14.101, n_transition=1e7, k=0.25, name="DNV-W1")
         else:
-            return cls(m1=3.0, log_a1=10.861, m2=5.0, log_a2=13.501, k=0.25, name="DNV-W1-SW")
+            return cls(m1=3.0, log_a1=10.861, m2=5.0, log_a2=14.101, n_transition=1e6, k=0.25, name="DNV-W1-CP")
 
     @classmethod
     def dnv_w2(cls, in_air: bool = True) -> SNCurve:
         """DNV W2 curve - Worst weld quality."""
         if in_air:
-            return cls(m1=3.0, log_a1=11.107, m2=5.0, log_a2=13.845, k=0.25, name="DNV-W2")
+            return cls(m1=3.0, log_a1=11.107, m2=5.0, log_a2=13.845, n_transition=1e7, k=0.25, name="DNV-W2")
         else:
-            return cls(m1=3.0, log_a1=10.707, m2=5.0, log_a2=13.245, k=0.25, name="DNV-W2-SW")
+            return cls(m1=3.0, log_a1=10.707, m2=5.0, log_a2=13.845, n_transition=1e6, k=0.25, name="DNV-W2-CP")
 
     @classmethod
     def dnv_w3(cls, in_air: bool = True) -> SNCurve:
         """DNV W3 curve - Worst weld quality (most conservative)."""
         if in_air:
-            return cls(m1=3.0, log_a1=10.970, m2=5.0, log_a2=13.617, k=0.25, name="DNV-W3")
+            return cls(m1=3.0, log_a1=10.970, m2=5.0, log_a2=13.617, n_transition=1e7, k=0.25, name="DNV-W3")
         else:
-            return cls(m1=3.0, log_a1=10.570, m2=5.0, log_a2=13.017, k=0.25, name="DNV-W3-SW")
+            return cls(m1=3.0, log_a1=10.570, m2=5.0, log_a2=13.617, n_transition=1e6, k=0.25, name="DNV-W3-CP")
 
 
 # =============================================================================

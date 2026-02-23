@@ -66,6 +66,18 @@ def Execute(info):
 
     model = info.model
 
+    # Report progress to keep Distributed OrcaFlex informed.
+    # Without periodic progress updates, the server may assume the job
+    # has stalled ("waiting for progress update") and restart it.
+    def report(msg):
+        print("spectraflex: " + msg)
+        try:
+            model.ReportActionProgress(msg)
+        except AttributeError:
+            pass  # ReportActionProgress not available in older OrcFxAPI
+
+    report("Extracting time histories...")
+
     # Use period 1 (main dynamics stage, skipping build-up stage 0)
     period = 1
 
@@ -105,6 +117,8 @@ def Execute(info):
     responses = np.column_stack(responses)  # (n_time, n_var)
     n_var = len(variable_names)
 
+    report("Computing spectra (" + str(n_var) + " variables)...")
+
     # Compute spectra using Welch's method
     noverlap = NOVERLAP if NOVERLAP is not None else NPERSEG // 2
 
@@ -125,6 +139,7 @@ def Execute(info):
     Sxy = np.zeros((n_freq, n_var), dtype=np.complex128)
 
     for i in range(n_var):
+        report("Processing variable " + str(i + 1) + "/" + str(n_var) + ": " + variable_names[i])
         resp = responses[:, i]
 
         # Output auto-spectrum
@@ -140,6 +155,8 @@ def Execute(info):
             noverlap=noverlap, detrend="constant", scaling="density"
         )
         Sxy[:, i] = sxy_full[pos_mask]
+
+    report("Saving results...")
 
     # Save to .npz file alongside the .sim
     sim_path = info.modelFileName

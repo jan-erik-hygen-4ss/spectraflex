@@ -5,6 +5,7 @@ Provides utilities for:
 - Attaching post-calculation actions for automatic spectrum extraction
 - Extracting time histories from .sim files
 - Batch parameter sweep generation
+- Spectral fatigue analysis via OrcaFlex FatigueAnalysis
 """
 
 from __future__ import annotations
@@ -15,6 +16,17 @@ from spectraflex.orcaflex.extract import (
     extract_wave_elevation,
     get_analysis_period,
     get_sample_interval,
+)
+from spectraflex.orcaflex.fatigue import (
+    ComparisonResult,
+    OrcaFlexFatigueConfig,
+    OrcaFlexFatigueResult,
+    SpectralLoadCase,
+    compare_results,
+    create_fatigue_analysis,
+    extract_results,
+    run_spectral_fatigue,
+    sn_curve_to_orcaflex,
 )
 from spectraflex.orcaflex.post_calc import (
     attach_post_calc,
@@ -39,4 +51,14 @@ __all__ = [
     "get_sample_interval",
     # batch
     "generate_case_matrix",
+    # fatigue
+    "SpectralLoadCase",
+    "OrcaFlexFatigueConfig",
+    "OrcaFlexFatigueResult",
+    "ComparisonResult",
+    "sn_curve_to_orcaflex",
+    "create_fatigue_analysis",
+    "extract_results",
+    "run_spectral_fatigue",
+    "compare_results",
 ]

@@ -76,7 +76,7 @@ def Execute(info):
         except AttributeError:
             pass  # ReportActionProgress not available in older OrcFxAPI
 
-    report("Extracting time histories...")
+    report("Starting spectral extraction...")
 
     # Use period 1 (main dynamics stage, skipping build-up stage 0)
     period = 1
@@ -85,6 +85,9 @@ def Execute(info):
     sample_times = model.environment.SampleTimes(period)
     dt = float(sample_times[1] - sample_times[0])
     fs = 1.0 / dt
+    n_samples = len(sample_times)
+
+    report("Extracting time histories (" + str(n_samples) + " samples, dt=" + str(dt) + "s)")
 
     # Extract wave elevation at origin
     wave = np.array(model.environment.TimeHistory(

@@ -54,15 +54,18 @@ src/spectraflex/          # All source code
   ├── io/                 # I/O utilities
   │   ├── __init__.py
   │   └── netcdf.py       # NetCDF save/load
+  ├── fatigue.py          # S-N curves (DNV-RP-C203) and spectral fatigue damage
   └── orcaflex/           # OrcaFlex integration
       ├── __init__.py
       ├── white_noise.py  # White noise model generation
-      ├── post_calc.py    # Post-calculation action script
+      ├── post_calc.py    # Post-calculation action script (with DOF progress reporting)
       ├── extract.py      # Time history extraction
-      └── batch.py        # Batch generation utilities
+      ├── batch.py        # Batch generation utilities
+      └── fatigue.py      # OrcaFlex FatigueAnalysis comparison/validation
 tests/                    # All tests
 examples/                 # Example scripts (not tested in CI)
 SPECTRAFLEX_DESIGN.md     # Architecture & API design doc
+uv.lock                   # Locked dependencies (tracked for reproducibility)
 ```
 
 ### Import Conventions
@@ -95,6 +98,8 @@ import OrcFxAPI as ofx      # only in orcaflex/ subpackage
 - [x] `orcaflex/post_calc.py` — bundled post-calc action script + attach()
 - [x] `orcaflex/extract.py` — extract time histories from .sim files
 - [x] `orcaflex/batch.py` — batch matrix generation utilities
+- [x] `fatigue.py` — SNCurve dataclass with DNV-RP-C203 curves, spectral fatigue damage
+- [x] `orcaflex/fatigue.py` — OrcaFlex FatigueAnalysis integration for comparison/validation
 
 ### Phase 3 — Synthesis & Polish (Pending)
 - [x] `predict.synthesize_timeseries()` — spectral synthesis (already implemented)

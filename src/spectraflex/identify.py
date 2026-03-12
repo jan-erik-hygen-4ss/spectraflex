@@ -25,6 +25,7 @@ def from_time_histories(
     noverlap: int | None = None,
     window: str = "hann",
     detrend: str | bool = "constant",
+    freq_range: tuple[float, float] | None = None,
 ) -> xr.Dataset:
     """Identify transfer functions from time history arrays.
 
@@ -47,6 +48,10 @@ def from_time_histories(
         Window function, default "hann".
     detrend : str or bool, optional
         Detrend option for scipy.signal, default "constant" (remove mean).
+    freq_range : tuple of float, optional
+        (f_min, f_max) to filter frequencies to the valid range. Useful for
+        white noise simulations where the input signal has energy only in a
+        limited band.
 
     Returns
     -------
@@ -147,6 +152,17 @@ def from_time_histories(
 
         coherence[:, i] = coh
 
+    # Filter to valid frequency range if specified
+    if freq_range is not None:
+        f_min, f_max = freq_range
+        mask = (f >= f_min) & (f <= f_max)
+        f = f[mask]
+        sxx = sxx[mask]
+        magnitude = magnitude[mask, :]
+        phase = phase[mask, :]
+        coherence = coherence[mask, :]
+        syy = syy[mask, :]
+
     return transfer_function.create(
         frequency=f,
         magnitude=magnitude,
@@ -170,6 +186,7 @@ def from_sim(
     window: str = "hann",
     config: dict[str, Any] | None = None,
     wave_position: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    freq_range: tuple[float, float] | None = None,
 ) -> xr.Dataset:
     """Identify transfer functions from an OrcaFlex simulation file.
 
@@ -196,6 +213,10 @@ def from_sim(
         Configuration metadata to store in the Dataset.
     wave_position : tuple of float, optional
         (x, y, z) position for wave elevation extraction, default (0, 0, 0).
+    freq_range : tuple of float, optional
+        (f_min, f_max) to filter frequencies to the valid range. Recommended
+        for white noise simulations to exclude frequencies outside the input
+        signal band.
 
     Returns
     -------
@@ -228,9 +249,10 @@ def from_sim(
     # Load the simulation
     model = ofx.Model(str(sim_path))
 
-    # Get analysis period (skip build-up stage)
-    t_start = model.general.StageDuration[0]
-    t_end = t_start + model.general.StageDuration[1]
+    # Get analysis period (skip build-up stage).
+    # OrcaFlex build-up occupies negative time; main sim runs from 0 to StageDuration[1].
+    t_start = 0.0
+    t_end = model.general.StageDuration[1]
     period = ofx.SpecifiedPeriod(t_start, t_end)
 
     # Get sample interval
@@ -252,7 +274,11 @@ def from_sim(
         labels.append(label)
 
         # Build ObjectExtra if needed
-        if "arclength" in res and res["arclength"] is not None:
+        if res.get("end_a"):
+            obj_extra = ofx.oeEndA
+        elif res.get("end_b"):
+            obj_extra = ofx.oeEndB
+        elif "arclength" in res and res["arclength"] is not None:
             obj_extra = ofx.oeArcLength(res["arclength"])
         else:
             obj_extra = None
@@ -275,6 +301,7 @@ def from_sim(
         nperseg=nperseg,
         noverlap=noverlap,
         window=window,
+        freq_range=freq_range,
     )
 
     # Add metadata

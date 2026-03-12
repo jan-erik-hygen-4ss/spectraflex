@@ -35,11 +35,13 @@ def get_analysis_period(
         (start_time, end_time) in seconds.
     """
     if skip_buildup:
-        t_start = model.general.StageDuration[0]
-        t_end = t_start + model.general.StageDuration[1]
-    else:
+        # OrcaFlex build-up occupies negative time (-buildup_dur to 0).
+        # Main sim runs from 0 to StageDuration[1].
         t_start = 0.0
-        t_end = sum(model.general.StageDuration[:2])
+        t_end = model.general.StageDuration[1]
+    else:
+        t_start = -model.general.StageDuration[0]
+        t_end = model.general.StageDuration[1]
 
     return t_start, t_end
 
